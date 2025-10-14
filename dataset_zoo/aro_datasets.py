@@ -561,6 +561,8 @@ class VG_QA(Dataset):
 
     def save_scores(self, scores,correct_id,path,dataset,method,weight,model_name,option):
         import json
+        # Create output directory if it doesn't exist
+        os.makedirs(path, exist_ok=True)
         path_=os.path.join(path, 'res.json')
         data = {"dataset":dataset,"model":model_name,"option":option,"method":method,"weight":weight,"Individual accuracy":scores,"correct_id":correct_id}
         with open(path_, 'a+') as file:
