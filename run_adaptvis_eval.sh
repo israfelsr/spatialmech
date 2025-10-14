@@ -21,7 +21,7 @@ DATASETS=(
     "VG_QA_two_obj"
 )
 
-echo "Starting Qwen2-VL vLLM evaluation on all datasets..."
+echo "Starting evaluation on all datasets..."
 echo "Model: $MODEL"
 echo "Device: $DEVICE"
 echo "Options: $OPTION"

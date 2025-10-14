@@ -49,7 +49,8 @@ class PaligemmaWrapper:
         """Get vLLM-specific configuration for PaliGemma."""
         config = {
             "max_model_len": 896,  # PaliGemma has a shorter context length
-            "max_num_seqs": 5,
+            "max_num_seqs": 10,
+            "max_num_batched_tokens": 8960,
             "limit_mm_per_prompt": {"image": 1},
             "dtype": "bfloat16",  # Use bfloat16 for better stability
         }
@@ -68,7 +69,7 @@ class PaligemmaWrapper:
             Formatted prompt string with <image> token
         """
         # PaliGemma requires <image> token at the beginning
-        return question
+        return question.replace("<image>\n", "")
 
     def _create_vllm_prompt(self, prompt, image):
         """
