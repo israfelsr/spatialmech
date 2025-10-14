@@ -150,7 +150,7 @@ class QwenVLLMWrapper:
                 answer_list.append(data["answer"])
 
         # Sampling configuration
-        SAMPLE = True
+        SAMPLE = False
         TEST = os.getenv("TEST_MODE", "False") == "True"
         total_data_count = len(prompt_list)
 

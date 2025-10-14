@@ -68,7 +68,7 @@ class PaligemmaWrapper:
             Formatted prompt string with <image> token
         """
         # PaliGemma requires <image> token at the beginning
-        return f"<image>{question}"
+        return question
 
     def _create_vllm_prompt(self, prompt, image):
         """
@@ -146,7 +146,7 @@ class PaligemmaWrapper:
                 answer_list.append(data["answer"])
 
         # Sampling configuration
-        SAMPLE = True
+        SAMPLE = False
         TEST = os.getenv("TEST_MODE", "False") == "True"
         total_data_count = len(prompt_list)
 
@@ -174,7 +174,7 @@ class PaligemmaWrapper:
         results = []
 
         # Create output directory if it doesn't exist
-        os.makedirs('./output', exist_ok=True)
+        os.makedirs("./output", exist_ok=True)
 
         for batch in tqdm(joint_loader):
             batch_scores = []
@@ -341,7 +341,13 @@ class PaligemmaWrapper:
                         pred = 0
                     else:
                         # If unclear, try to parse based on affirmative/negative words
-                        pred = 1 if any(word in gen for word in ["correct", "true", "accurate"]) else 0
+                        pred = (
+                            1
+                            if any(
+                                word in gen for word in ["correct", "true", "accurate"]
+                            )
+                            else 0
+                        )
 
                     preds.append(pred)
                     print(f"Caption: {caption}\nGeneration: {gen}\nPrediction: {pred}")

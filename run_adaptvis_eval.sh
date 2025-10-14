@@ -1,5 +1,6 @@
 #!/bin/bash
 
+export PYTHONPATH=$(pwd)
 # Configuration
 MODEL="qwen2vl-vllm"
 DEVICE="cuda"
