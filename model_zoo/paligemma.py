@@ -48,9 +48,10 @@ class PaligemmaWrapper:
     def _get_vllm_config(self, model_name):
         """Get vLLM-specific configuration for PaliGemma."""
         config = {
-            "max_model_len": 2048,
+            "max_model_len": 896,  # PaliGemma has a shorter context length
             "max_num_seqs": 5,
             "limit_mm_per_prompt": {"image": 1},
+            "dtype": "bfloat16",  # Use bfloat16 for better stability
         }
 
         return config
@@ -58,16 +59,16 @@ class PaligemmaWrapper:
     def _format_paligemma_prompt(self, question):
         """
         Format question for PaliGemma.
-        PaliGemma expects simple prompts without special chat templates.
+        PaliGemma expects an <image> token at the beginning of the prompt.
 
         Args:
             question: The question text
 
         Returns:
-            Formatted prompt string
+            Formatted prompt string with <image> token
         """
-        # PaliGemma uses simple prompts
-        return question
+        # PaliGemma requires <image> token at the beginning
+        return f"<image>{question}"
 
     def _create_vllm_prompt(self, prompt, image):
         """
@@ -171,6 +172,9 @@ class PaligemmaWrapper:
             answer_list = [answer_list[i] for i in sampled_indices]
 
         results = []
+
+        # Create output directory if it doesn't exist
+        os.makedirs('./output', exist_ok=True)
 
         for batch in tqdm(joint_loader):
             batch_scores = []
