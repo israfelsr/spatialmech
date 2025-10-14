@@ -33,7 +33,7 @@ do
     echo "Evaluating on dataset: $dataset"
     echo "----------------------------------------------"
 
-    python scripts/eval_vllm.py \
+    python scripts/eval_vlm.py \
         --model-name $MODEL \
         --dataset $dataset \
         --option $OPTION \
