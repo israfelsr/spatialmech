@@ -14,7 +14,7 @@ class PaligemmaWrapper:
         root_dir,
         device,
         method="base",
-        model_name="/leonardo_work/EUHPC_D27_102/compmech/models/paligemma2-3b-pt-224",
+        model_name="/leonardo_work/EUHPC_D27_102/compmech/models/paligemma2-3b-mix-224",
     ):
         """
         Initialize PaliGemma model wrapper with vLLM.
