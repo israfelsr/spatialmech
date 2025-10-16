@@ -8,28 +8,28 @@ from PIL import Image
 from vllm import LLM, SamplingParams
 
 
-class QwenVLLMWrapper:
+class Gemma3Wrapper:
     def __init__(
         self,
         root_dir,
         device,
         method="base",
-        model_name="/leonardo_work/EUHPC_D27_102/compmech/models/Qwen3-VL-4B-Instruct",
+        model_name="/leonardo_work/EUHPC_D27_102/compmech/models/gemma-3-4b-it/",
     ):
         """
-        Initialize Qwen2-VL model wrapper with vLLM.
+        Initialize Gemma 3 model wrapper with vLLM.
 
         Args:
             root_dir: Directory for model cache
             device: Device to load model on (vLLM handles device placement)
-            method: Evaluation method (not used for basic Qwen, kept for compatibility)
-            model_name: Qwen model variant to use
+            method: Evaluation method (not used for basic Gemma3, kept for compatibility)
+            model_name: Gemma 3 model variant to use
         """
         # Get vLLM-specific model configuration
         vllm_config = self._get_vllm_config(model_name)
 
         # Initialize vLLM model
-        print(f"Loading Qwen2-VL with vLLM: {model_name}")
+        print(f"Loading Gemma 3 with vLLM: {model_name}")
         print(f"vLLM config: {vllm_config}")
 
         self.llm = LLM(model=model_name, **vllm_config)
@@ -46,31 +46,39 @@ class QwenVLLMWrapper:
         self.model_name = model_name
 
     def _get_vllm_config(self, model_name):
-        """Get vLLM-specific configuration for Qwen2-VL."""
+        """Get vLLM-specific configuration for Gemma 3."""
         config = {
-            "max_model_len": 4096,
-            "max_num_seqs": 5,
+            "max_model_len": 2048,
+            "max_num_seqs": 2,
             "limit_mm_per_prompt": {"image": 1},
         }
 
-        # Add Qwen-specific processor kwargs
+        # Add Gemma 3-specific processor kwargs
         config["mm_processor_kwargs"] = {
-            "min_pixels": 28 * 28,
-            "max_pixels": 1280 * 28 * 28,
+            "do_pan_and_scan": True,
         }
 
         return config
 
-    def _format_qwen_prompt(self, question):
+    def _format_gemma3_prompt(self, question):
         """
-        Format question into Qwen2.5-VL chat template format for vLLM.
-        Based on the format from scripts/vllm_inference.py
+        Format question into Gemma 3 chat template format for vLLM.
+        Based on the Gemma 3 multimodal format.
+
+        Args:
+            question: The question text (with <image> placeholder)
+
+        Returns:
+            Formatted prompt string
         """
-        # Qwen2.5-VL format for vLLM
+        # Remove the <image> placeholder if present, as we'll add it in the right place
+        question_text = question.replace("<image>", "").replace("\n", " ").strip()
+
+        # Gemma 3 format for vLLM
         prompt_text = (
-            "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n"
-            f"<|im_start|>user\n<|vision_start|><|image_pad|><|vision_end|>{question}<|im_end|>\n"
-            "<|im_start|>assistant\n"
+            "<bos><start_of_turn>user\n"
+            f"<start_of_image>{question_text}<end_of_turn>\n"
+            "<start_of_turn>model\n"
         )
         return prompt_text
 
@@ -85,7 +93,7 @@ class QwenVLLMWrapper:
         Returns:
             Dictionary with prompt and multi_modal_data
         """
-        formatted_prompt = self._format_qwen_prompt(prompt)
+        formatted_prompt = self._format_gemma3_prompt(prompt)
 
         vllm_prompt = {
             "prompt": formatted_prompt,
@@ -106,7 +114,7 @@ class QwenVLLMWrapper:
         weight2=None,
     ):
         """
-        Generate outputs and scores for What's Up dataset using Qwen2-VL with vLLM.
+        Generate outputs and scores for What's Up dataset using Gemma 3 with vLLM.
 
         Args:
             dataset: Dataset name
@@ -176,6 +184,9 @@ class QwenVLLMWrapper:
             answer_list = [answer_list[i] for i in sampled_indices]
 
         results = []
+
+        # Create output directory if it doesn't exist
+        os.makedirs("./output", exist_ok=True)
 
         for batch in tqdm(joint_loader):
             batch_scores = []
@@ -266,7 +277,9 @@ class QwenVLLMWrapper:
             scores.append(batch_scores)
 
             # Save results periodically
-            output_file_path = f"./output/results_qwen_vllm_{dataset}_{method}_{option}option_{TEST}.json"
+            output_file_path = (
+                f"./output/results_gemma3_{dataset}_{method}_{option}option_{TEST}.json"
+            )
             with open(output_file_path, "w", encoding="utf-8") as fout:
                 json.dump(results, fout, ensure_ascii=False, indent=4)
 
@@ -292,3 +305,71 @@ class QwenVLLMWrapper:
             return (all_scores, [])
         else:
             return (acc / index_of_total if index_of_total > 0 else 0, correct_id)
+
+    @torch.no_grad()
+    def get_judge_scores_vsr_batched(
+        self,
+        dataset,
+        joint_loader,
+        method,
+        weight,
+        threshold=None,
+        weight1=None,
+        weight2=None,
+    ):
+        """
+        Generate outputs and scores for VSR dataset using Gemma 3 with vLLM.
+
+        Args:
+            dataset: Dataset name (should be "VSR")
+            joint_loader: DataLoader with batched images
+            method: Generation method (kept for compatibility)
+            weight: Weight parameter (kept for compatibility)
+            threshold: Threshold for adaptive methods
+            weight1, weight2: Additional weights for adaptive methods
+
+        Returns:
+            Numpy array of binary predictions
+        """
+        preds = []
+        TEST = os.getenv("TEST_MODE", "False") == "True"
+
+        for batch in tqdm(joint_loader):
+            # VSR has single images with captions to verify
+            for i, image in enumerate(batch["image_options"][0]):
+                caption = batch["caption_options"][0][i]
+
+                # Create yes/no verification prompt
+                prompt = f"Does this image show: {caption}? Answer yes or no."
+
+                vllm_prompt = self._create_vllm_prompt(prompt, image)
+
+                try:
+                    outputs = self.llm.generate([vllm_prompt], self.sampling_params)
+                    gen = outputs[0].outputs[0].text.strip().lower()
+
+                    # Parse yes/no answer
+                    if "yes" in gen:
+                        pred = 1
+                    elif "no" in gen:
+                        pred = 0
+                    else:
+                        # If unclear, try to parse based on affirmative/negative words
+                        pred = (
+                            1
+                            if any(
+                                word in gen for word in ["correct", "true", "accurate"]
+                            )
+                            else 0
+                        )
+
+                    preds.append(pred)
+                    print(f"Caption: {caption}\nGeneration: {gen}\nPrediction: {pred}")
+
+                except Exception as e:
+                    print(f"Error during vLLM generation: {e}")
+                    preds.append(0)  # Default to negative on error
+
+        # Convert to numpy array with shape matching expected output
+        preds_array = np.array(preds).reshape(-1, 1, 1)
+        return preds_array
