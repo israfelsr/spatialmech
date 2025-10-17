@@ -20,7 +20,14 @@ def config():
         "--model-name",
         default="llava1.5",
         type=str,
-        choices=["llava1.5", "llava1.6", "qwen2vl", "qwen2vl-vllm", "paligemma", "gemma3"],
+        choices=[
+            "llava1.5",
+            "llava1.6",
+            "qwen2vl",
+            "qwen2vl-vllm",
+            "paligemma",
+            "gemma3",
+        ],
     )
     parser.add_argument(
         "--dataset",
