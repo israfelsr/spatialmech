@@ -71,7 +71,6 @@ class Gemma3Wrapper:
         Returns:
             Formatted prompt string
         """
-        # Remove the <image> placeholder if present, as we'll add it in the right place
         question_text = question.replace("<image>", "").replace("\n", " ").strip()
 
         # Gemma 3 format for vLLM
