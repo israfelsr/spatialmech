@@ -1,26 +1,3 @@
-"""
-Two-Hop Attention Metrics
-
-Metrics for analyzing the 2-hop attention hypothesis:
-"Text tokens gather information from the image, and the last token
-reads from those text tokens (rather than directly from the image)."
-
-Usage:
-    from mechanistic.utils.two_hop_metrics import (
-        compute_all_two_hop_metrics,
-        last_token_attention_distribution,
-        text_tokens_attention_distribution,
-    )
-
-    # Assuming you have a sample dict with 'attentions' and 'input_ids'
-    metrics = compute_all_two_hop_metrics(
-        sample,
-        vision_token_range=(start_idx, end_idx),
-        text_token_range=(text_start_idx, text_end_idx),
-        last_token_idx=-1
-    )
-"""
-
 import torch
 import numpy as np
 from typing import Dict, Tuple, Optional, List
@@ -33,12 +10,12 @@ class TwoHopMetrics:
 
     # Core metrics
     last_token_image_pct: float  # % attention from last token to image
-    last_token_text_pct: float   # % attention from last token to text
+    last_token_text_pct: float  # % attention from last token to text
 
     # Text tokens attention distribution
     text_tokens_image_pct_mean: float  # Average % attention from text to image
     text_tokens_image_pct_std: float
-    text_tokens_text_pct_mean: float   # Average % attention from text to other text
+    text_tokens_text_pct_mean: float  # Average % attention from text to other text
     text_tokens_text_pct_std: float
 
     # 2-hop hypothesis metrics
@@ -70,21 +47,9 @@ def identify_token_ranges(
     input_ids: torch.Tensor,
     tokenizer,
     vision_start_token: str = "<|vision_start|>",
-    vision_end_token: str = "<|vision_end|>"
+    vision_end_token: str = "<|vision_end|>",
 ) -> Tuple[Tuple[int, int], Tuple[int, int]]:
-    """
-    Automatically identify vision and text token ranges.
 
-    Args:
-        input_ids: Tensor of token IDs [batch, seq_len] or [seq_len]
-        tokenizer: Tokenizer to decode tokens
-        vision_start_token: Special token marking start of vision tokens
-        vision_end_token: Special token marking end of vision tokens
-
-    Returns:
-        vision_range: (start_idx, end_idx) for vision tokens (exclusive end)
-        text_range: (start_idx, end_idx) for text tokens (exclusive end)
-    """
     if input_ids.dim() == 2:
         input_ids = input_ids[0]
 
@@ -115,7 +80,7 @@ def last_token_attention_distribution(
     vision_range: Tuple[int, int],
     text_range: Tuple[int, int],
     last_token_idx: int = -1,
-    average_heads: bool = True
+    average_heads: bool = True,
 ) -> Dict[str, float]:
     """
     Compute attention distribution for the last token.
@@ -179,7 +144,7 @@ def text_tokens_attention_distribution(
     vision_range: Tuple[int, int],
     text_range: Tuple[int, int],
     average_heads: bool = True,
-    exclude_self_attention: bool = True
+    exclude_self_attention: bool = True,
 ) -> Dict[str, any]:
     """
     Compute attention distribution for all text tokens.
@@ -265,7 +230,7 @@ def compute_attention_flow_score(
     vision_range: Tuple[int, int],
     text_range: Tuple[int, int],
     last_token_idx: int = -1,
-    average_heads: bool = True
+    average_heads: bool = True,
 ) -> float:
     """
     Compute correlation between (text→image) and (last→text).
@@ -301,7 +266,9 @@ def compute_attention_flow_score(
     text_start, text_end = text_range
 
     # Get text→image attention for each text token
-    text_to_image = attention[text_start:text_end, vision_start:vision_end].sum(dim=1)  # [num_text]
+    text_to_image = attention[text_start:text_end, vision_start:vision_end].sum(
+        dim=1
+    )  # [num_text]
 
     # Get last→text attention
     last_to_text = attention[last_token_idx, text_start:text_end]  # [num_text]
@@ -311,8 +278,8 @@ def compute_attention_flow_score(
         return 0.0
 
     # Convert to numpy for correlation
-    text_to_image_np = text_to_image.cpu().numpy()
-    last_to_text_np = last_to_text.cpu().numpy()
+    text_to_image_np = text_to_image.cpu().float().numpy()
+    last_to_text_np = last_to_text.cpu().float().numpy()
 
     # Pearson correlation
     correlation = np.corrcoef(text_to_image_np, last_to_text_np)[0, 1]
@@ -330,7 +297,7 @@ def compute_information_bottleneck_score(
     text_range: Tuple[int, int],
     last_token_idx: int = -1,
     average_heads: bool = True,
-    top_k: int = 3
+    top_k: int = 3,
 ) -> Tuple[float, List[int]]:
     """
     Identify which text tokens act as "information hubs".
@@ -367,14 +334,20 @@ def compute_information_bottleneck_score(
     text_start, text_end = text_range
 
     # Get text→image attention (how much each text token attends to image)
-    text_to_image = attention[text_start:text_end, vision_start:vision_end].sum(dim=1)  # [num_text]
+    text_to_image = attention[text_start:text_end, vision_start:vision_end].sum(
+        dim=1
+    )  # [num_text]
 
     # Get last→text attention (how much last token attends to each text token)
     last_to_text = attention[last_token_idx, text_start:text_end]  # [num_text]
 
     # Normalize both to [0, 1]
-    text_to_image_norm = (text_to_image - text_to_image.min()) / (text_to_image.max() - text_to_image.min() + 1e-8)
-    last_to_text_norm = (last_to_text - last_to_text.min()) / (last_to_text.max() - last_to_text.min() + 1e-8)
+    text_to_image_norm = (text_to_image - text_to_image.min()) / (
+        text_to_image.max() - text_to_image.min() + 1e-8
+    )
+    last_to_text_norm = (last_to_text - last_to_text.min()) / (
+        last_to_text.max() - last_to_text.min() + 1e-8
+    )
 
     # Hub score: product of both (high when both are high)
     hub_scores = text_to_image_norm * last_to_text_norm
@@ -396,7 +369,7 @@ def compute_indirect_image_attention(
     vision_range: Tuple[int, int],
     text_range: Tuple[int, int],
     last_token_idx: int = -1,
-    average_heads: bool = True
+    average_heads: bool = True,
 ) -> Dict[str, float]:
     """
     Compare direct vs indirect image attention from last token.
@@ -439,7 +412,9 @@ def compute_indirect_image_attention(
 
     # Indirect attention: Σ(last→text[i] × text[i]→image)
     last_to_text = attention[last_token_idx, text_start:text_end]  # [num_text]
-    text_to_image = attention[text_start:text_end, vision_start:vision_end].sum(dim=1)  # [num_text]
+    text_to_image = attention[text_start:text_end, vision_start:vision_end].sum(
+        dim=1
+    )  # [num_text]
 
     indirect_attn = (last_to_text * text_to_image).sum().item()
 
@@ -459,7 +434,7 @@ def compute_positional_analysis(
     text_range: Tuple[int, int],
     token_strings: List[str],
     keywords: List[str] = ["left", "right", "front", "behind", "where"],
-    average_heads: bool = True
+    average_heads: bool = True,
 ) -> Dict[str, float]:
     """
     Analyze which token positions (e.g., object names, spatial words) attend most to image.
@@ -493,20 +468,28 @@ def compute_positional_analysis(
     text_start, text_end = text_range
 
     # Get text→image attention
-    text_to_image = attention[text_start:text_end, vision_start:vision_end].sum(dim=1)  # [num_text]
+    text_to_image = attention[text_start:text_end, vision_start:vision_end].sum(
+        dim=1
+    )  # [num_text]
 
     # Normalize to percentages
     text_total_attn = attention[text_start:text_end].sum(dim=1)
-    text_to_image_pct = (text_to_image / (text_total_attn + 1e-8) * 100).cpu().numpy()
+    text_to_image_pct = (
+        (text_to_image / (text_total_attn + 1e-8) * 100).float().cpu().numpy()
+    )
 
     # Find keywords in token strings
     keyword_attention = {}
     for keyword in keywords:
         keyword_lower = keyword.lower()
-        matching_indices = [i for i, token in enumerate(token_strings) if keyword_lower in token.lower()]
+        matching_indices = [
+            i for i, token in enumerate(token_strings) if keyword_lower in token.lower()
+        ]
 
         if matching_indices:
-            keyword_attention[keyword] = float(text_to_image_pct[matching_indices].mean())
+            keyword_attention[keyword] = float(
+                text_to_image_pct[matching_indices].mean()
+            )
         else:
             keyword_attention[keyword] = 0.0
 
@@ -518,7 +501,7 @@ def compute_layer_wise_evolution(
     vision_range: Tuple[int, int],
     text_range: Tuple[int, int],
     last_token_idx: int = -1,
-    average_heads: bool = True
+    average_heads: bool = True,
 ) -> Dict[str, List[float]]:
     """
     Track how attention patterns evolve across layers.
@@ -566,7 +549,7 @@ def compute_all_two_hop_metrics(
     layer_idx: int = -1,
     average_heads: bool = True,
     analyze_all_layers: bool = False,
-    keywords: List[str] = ["left", "right", "front", "behind", "where"]
+    keywords: List[str] = ["left", "right", "front", "behind", "where"],
 ) -> TwoHopMetrics:
     """
     Compute all 2-hop attention metrics for a sample.
@@ -586,7 +569,7 @@ def compute_all_two_hop_metrics(
         TwoHopMetrics object with all computed metrics
     """
     # Get attention from specified layer
-    attentions = sample["attentions"]
+    attentions = sample["attentions"][0]  # take out the first token
     if isinstance(attentions, tuple):
         attention = attentions[layer_idx]
     else:
@@ -666,31 +649,29 @@ def compute_all_two_hop_metrics(
         # Core metrics
         last_token_image_pct=last_token_dist["image_pct"],
         last_token_text_pct=last_token_dist["text_pct"],
-
         # Text tokens distribution
         text_tokens_image_pct_mean=text_tokens_dist["image_pct_mean"],
         text_tokens_image_pct_std=text_tokens_dist["image_pct_std"],
         text_tokens_text_pct_mean=text_tokens_dist["text_pct_mean"],
         text_tokens_text_pct_std=text_tokens_dist["text_pct_std"],
-
         # 2-hop hypothesis metrics
         attention_flow_score=flow_score,
         information_bottleneck_score=hub_score,
         hub_token_indices=hub_indices,
         hub_token_strings=hub_token_strings,
-
         # Direct vs indirect
         direct_image_attention=indirect_metrics["direct"],
         indirect_image_attention=indirect_metrics["indirect"],
         indirect_to_direct_ratio=indirect_metrics["ratio"],
-
         # Layer-wise (if computed)
-        layer_wise_last_token_image_pct=layer_wise["last_token_image_pct"] if layer_wise else None,
-        layer_wise_text_tokens_image_pct=layer_wise["text_tokens_image_pct"] if layer_wise else None,
-
+        layer_wise_last_token_image_pct=(
+            layer_wise["last_token_image_pct"] if layer_wise else None
+        ),
+        layer_wise_text_tokens_image_pct=(
+            layer_wise["text_tokens_image_pct"] if layer_wise else None
+        ),
         # Positional
         position_specific_image_attention=positional_metrics,
-
         # Context
         num_layers=num_layers,
         num_image_tokens=num_image_tokens,
@@ -717,8 +698,12 @@ def print_metrics_summary(metrics: TwoHopMetrics, verbose: bool = True):
     print(f"    → Text:  {metrics.last_token_text_pct:.2f}%")
     print(f"  ")
     print(f"  Text tokens attention (mean ± std):")
-    print(f"    → Image: {metrics.text_tokens_image_pct_mean:.2f}% ± {metrics.text_tokens_image_pct_std:.2f}%")
-    print(f"    → Text:  {metrics.text_tokens_text_pct_mean:.2f}% ± {metrics.text_tokens_text_pct_std:.2f}%")
+    print(
+        f"    → Image: {metrics.text_tokens_image_pct_mean:.2f}% ± {metrics.text_tokens_image_pct_std:.2f}%"
+    )
+    print(
+        f"    → Text:  {metrics.text_tokens_text_pct_mean:.2f}% ± {metrics.text_tokens_text_pct_std:.2f}%"
+    )
 
     print("\n🔗 TWO-HOP HYPOTHESIS METRICS")
     print(f"  Attention flow score: {metrics.attention_flow_score:.3f}")
@@ -727,7 +712,9 @@ def print_metrics_summary(metrics: TwoHopMetrics, verbose: bool = True):
     print(f"  ")
     print(f"  Information bottleneck score: {metrics.information_bottleneck_score:.3f}")
     print(f"    (Strength of hub tokens)")
-    print(f"    Hub tokens (top-{len(metrics.hub_token_indices)}): {metrics.hub_token_strings}")
+    print(
+        f"    Hub tokens (top-{len(metrics.hub_token_indices)}): {metrics.hub_token_strings}"
+    )
 
     print("\n🔄 DIRECT VS INDIRECT IMAGE ACCESS")
     print(f"  Direct (last→image):   {metrics.direct_image_attention:.4f}")

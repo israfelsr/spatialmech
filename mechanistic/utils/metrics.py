@@ -1,15 +1,71 @@
-"""
-Mechanistic Metrics
-
-Metrics for evaluating mechanistic properties:
-- Attention entropy
-- Attribution sparsity
-- Causal effect strength
-"""
-
 import torch
 import numpy as np
 from typing import Optional
+from typing import Dict, Tuple, Optional, List
+
+
+def last_token_attention_distribution(
+    attention: torch.Tensor,
+    vision_range: Tuple[int, int],
+    text_range: Tuple[int, int],
+    last_token_idx: int = -1,
+    average_heads: bool = True,
+) -> Dict[str, float]:
+    """
+    Compute attention distribution for the last token.
+
+    Args:
+        attention: Attention tensor [batch, heads, seq, seq] or [heads, seq, seq] or [seq, seq]
+        vision_range: (start, end) indices for vision tokens
+        text_range: (start, end) indices for text tokens
+        last_token_idx: Index of last token (-1 for last, -2 for second-to-last, etc.)
+        average_heads: Whether to average across attention heads
+
+    Returns:
+        Dictionary with:
+            - image_pct: % attention to image tokens
+            - text_pct: % attention to text tokens
+            - other_pct: % attention to other tokens
+            - image_attn: Raw attention to image tokens
+            - text_attn: Raw attention to text tokens
+    """
+    # Handle tuple of layers (select first element if tuple)
+    if isinstance(attention, tuple):
+        raise TypeError(
+            "Received tuple of attention layers. Please select a specific layer first. "
+            "Example: attention = sample['attentions'][-1]"
+        )
+
+    # Handle different tensor shapes
+    if attention.dim() == 4:
+        attention = attention[0]  # Remove batch dim
+
+    if attention.dim() == 3 and average_heads:
+        attention = attention.mean(0)  # Average over heads: [seq, seq]
+
+    # Get attention from last token
+    last_token_attn = attention[last_token_idx]  # [seq]
+
+    vision_start, vision_end = vision_range
+    text_start, text_end = text_range
+
+    # Sum attention to different regions
+    image_attn = last_token_attn[vision_start:vision_end].sum().item()
+    text_attn = last_token_attn[text_start:text_end].sum().item()
+    total_attn = last_token_attn.sum().item()
+
+    # Compute percentages
+    image_pct = (image_attn / total_attn * 100) if total_attn > 0 else 0
+    text_pct = (text_attn / total_attn * 100) if total_attn > 0 else 0
+    other_pct = 100 - image_pct - text_pct
+
+    return {
+        "image_pct": image_pct,
+        "text_pct": text_pct,
+        "other_pct": other_pct,
+        "image_attn": image_attn,
+        "text_attn": text_attn,
+    }
 
 
 def attention_entropy(attention_weights: torch.Tensor, dim: int = -1) -> torch.Tensor:
@@ -36,7 +92,9 @@ def attention_entropy(attention_weights: torch.Tensor, dim: int = -1) -> torch.T
     return entropy
 
 
-def attention_sparsity(attention_weights: torch.Tensor, threshold: float = 0.1) -> float:
+def attention_sparsity(
+    attention_weights: torch.Tensor, threshold: float = 0.1
+) -> float:
     """
     Calculate sparsity of attention (fraction of weights above threshold).
 
@@ -53,8 +111,7 @@ def attention_sparsity(attention_weights: torch.Tensor, threshold: float = 0.1) 
 
 
 def attention_concentration(
-    attention_weights: torch.Tensor,
-    k: Optional[int] = None
+    attention_weights: torch.Tensor, k: Optional[int] = None
 ) -> torch.Tensor:
     """
     Calculate concentration: sum of top-k attention weights.
@@ -78,9 +135,7 @@ def attention_concentration(
 
 
 def causal_effect_strength(
-    clean_output: torch.Tensor,
-    patched_output: torch.Tensor,
-    metric: str = "mse"
+    clean_output: torch.Tensor, patched_output: torch.Tensor, metric: str = "mse"
 ) -> float:
     """
     Calculate strength of causal effect from activation patching.
@@ -97,9 +152,7 @@ def causal_effect_strength(
         effect = torch.nn.functional.mse_loss(patched_output, clean_output).item()
     elif metric == "cosine":
         similarity = torch.nn.functional.cosine_similarity(
-            clean_output.flatten(),
-            patched_output.flatten(),
-            dim=0
+            clean_output.flatten(), patched_output.flatten(), dim=0
         )
         effect = (1.0 - similarity).item()
     elif metric == "kl":
@@ -107,9 +160,7 @@ def causal_effect_strength(
         clean_probs = torch.softmax(clean_output, dim=-1)
         patched_probs = torch.softmax(patched_output, dim=-1)
         effect = torch.nn.functional.kl_div(
-            torch.log(patched_probs + 1e-10),
-            clean_probs,
-            reduction='batchmean'
+            torch.log(patched_probs + 1e-10), clean_probs, reduction="batchmean"
         ).item()
     else:
         raise ValueError(f"Unknown metric: {metric}")
@@ -117,7 +168,9 @@ def causal_effect_strength(
     return effect
 
 
-def attribution_sparsity(attribution_map: torch.Tensor, percentile: float = 90) -> float:
+def attribution_sparsity(
+    attribution_map: torch.Tensor, percentile: float = 90
+) -> float:
     """
     Calculate sparsity of attribution map.
 
@@ -134,9 +187,9 @@ def attribution_sparsity(attribution_map: torch.Tensor, percentile: float = 90) 
 
 
 __all__ = [
-    'attention_entropy',
-    'attention_sparsity',
-    'attention_concentration',
-    'causal_effect_strength',
-    'attribution_sparsity'
+    "attention_entropy",
+    "attention_sparsity",
+    "attention_concentration",
+    "causal_effect_strength",
+    "attribution_sparsity",
 ]
