@@ -34,5 +34,4 @@ def convert_coco_qa_to_hf(coco_qa_dataset, has_two_objects=True):
         data["preposition"].append(coco_qa_dataset.all_prepositions[i])
 
     hf_dataset = Dataset.from_dict(data)
-    hf_dataset = hf_dataset.cast_column("image", HFImage())
     return hf_dataset
