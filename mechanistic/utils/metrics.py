@@ -4,6 +4,38 @@ from typing import Optional
 from typing import Dict, Tuple, Optional, List
 
 
+def identify_token_ranges(
+    input_ids: torch.Tensor,
+    tokenizer,
+    vision_start_token: str = "<|vision_start|>",
+    vision_end_token: str = "<|vision_end|>",
+) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+
+    if input_ids.dim() == 2:
+        input_ids = input_ids[0]
+
+    tokens = [tokenizer.decode(t) for t in input_ids]
+
+    vision_start_idx = None
+    vision_end_idx = None
+
+    for i, token in enumerate(tokens):
+        if vision_start_token in token:
+            vision_start_idx = i + 1  # Start after the marker
+        if vision_end_token in token:
+            vision_end_idx = i  # End before the marker
+            break
+
+    if vision_start_idx is None or vision_end_idx is None:
+        raise ValueError(f"Could not find vision tokens. Tokens: {tokens[:20]}...")
+
+    # Text tokens start after vision_end marker
+    text_start_idx = vision_end_idx + 1
+    text_end_idx = len(tokens)
+
+    return (vision_start_idx, vision_end_idx), (text_start_idx, text_end_idx)
+
+
 def last_token_attention_distribution(
     attention: torch.Tensor,
     vision_range: Tuple[int, int],
