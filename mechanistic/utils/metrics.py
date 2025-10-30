@@ -57,17 +57,8 @@ def last_token_attention_distribution(
         Dictionary with:
             - image_pct: % attention to image tokens
             - text_pct: % attention to text tokens
-            - other_pct: % attention to other tokens
-            - image_attn: Raw attention to image tokens
-            - text_attn: Raw attention to text tokens
+            - bos_pct: % attention to other tokens
     """
-    # Handle tuple of layers (select first element if tuple)
-    if isinstance(attention, tuple):
-        raise TypeError(
-            "Received tuple of attention layers. Please select a specific layer first. "
-            "Example: attention = sample['attentions'][-1]"
-        )
-
     # Handle different tensor shapes
     if attention.dim() == 4:
         attention = attention[0]  # Remove batch dim
@@ -87,16 +78,14 @@ def last_token_attention_distribution(
     total_attn = last_token_attn.sum().item()
 
     # Compute percentages
-    image_pct = (image_attn / total_attn * 100) if total_attn > 0 else 0
-    text_pct = (text_attn / total_attn * 100) if total_attn > 0 else 0
-    other_pct = 100 - image_pct - text_pct
+    image_pct = image_attn * 100
+    text_pct = text_attn * 100
+    bos_pct = 100 - image_pct - text_pct
 
     return {
         "image_pct": image_pct,
         "text_pct": text_pct,
-        "other_pct": other_pct,
-        "image_attn": image_attn,
-        "text_attn": text_attn,
+        "bos_pct": bos_pct,
     }
 
 
