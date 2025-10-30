@@ -19,7 +19,7 @@ def plot_layer_wise_attention(
         layer_distributions: List of dicts, one per layer, each containing:
             - 'image_pct': % attention to image tokens
             - 'text_pct': % attention to text tokens
-            - 'other_pct': % attention to other tokens
+            - 'bos_pct': % attention to other tokens
         save_path: Optional path to save figure
         figsize: Figure size
         title: Optional custom title
@@ -30,7 +30,7 @@ def plot_layer_wise_attention(
     # Extract percentages for each category
     image_pcts = [d["image_pct"] for d in layer_distributions]
     text_pcts = [d["text_pct"] for d in layer_distributions]
-    other_pcts = [d["other_pct"] for d in layer_distributions]
+    bos_pcts = [d["bos_pct"] for d in layer_distributions]
 
     # Create figure
     fig, ax = plt.subplots(figsize=figsize)
@@ -56,7 +56,7 @@ def plot_layer_wise_attention(
     )
     ax.plot(
         layers,
-        other_pcts,
+        bos_pcts,
         marker="^",
         linewidth=3,
         markersize=8,
