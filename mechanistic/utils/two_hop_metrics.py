@@ -135,6 +135,13 @@ def last_token_attention_distribution(
             - image_attn: Raw attention to image tokens
             - text_attn: Raw attention to text tokens
     """
+    # Handle tuple of layers (select first element if tuple)
+    if isinstance(attention, tuple):
+        raise TypeError(
+            "Received tuple of attention layers. Please select a specific layer first. "
+            "Example: attention = sample['attentions'][-1]"
+        )
+
     # Handle different tensor shapes
     if attention.dim() == 4:
         attention = attention[0]  # Remove batch dim
@@ -193,6 +200,13 @@ def text_tokens_attention_distribution(
             - per_token_image_pct: [num_text_tokens] array of image attention %
             - per_token_text_pct: [num_text_tokens] array of text attention %
     """
+    # Handle tuple of layers
+    if isinstance(attention, tuple):
+        raise TypeError(
+            "Received tuple of attention layers. Please select a specific layer first. "
+            "Example: attention = sample['attentions'][-1]"
+        )
+
     # Handle different tensor shapes
     if attention.dim() == 4:
         attention = attention[0]  # Remove batch dim
@@ -269,6 +283,13 @@ def compute_attention_flow_score(
     Returns:
         Pearson correlation coefficient between text→image and last→text
     """
+    # Handle tuple of layers
+    if isinstance(attention, tuple):
+        raise TypeError(
+            "Received tuple of attention layers. Please select a specific layer first. "
+            "Example: attention = sample['attentions'][-1]"
+        )
+
     # Handle different tensor shapes
     if attention.dim() == 4:
         attention = attention[0]
@@ -328,6 +349,13 @@ def compute_information_bottleneck_score(
         hub_score: Overall hub score (product of normalized attentions)
         hub_indices: Indices of top-k hub tokens (relative to text_start)
     """
+    # Handle tuple of layers
+    if isinstance(attention, tuple):
+        raise TypeError(
+            "Received tuple of attention layers. Please select a specific layer first. "
+            "Example: attention = sample['attentions'][-1]"
+        )
+
     # Handle different tensor shapes
     if attention.dim() == 4:
         attention = attention[0]
@@ -389,6 +417,13 @@ def compute_indirect_image_attention(
             - indirect: Indirect attention via text tokens
             - ratio: indirect/direct ratio
     """
+    # Handle tuple of layers
+    if isinstance(attention, tuple):
+        raise TypeError(
+            "Received tuple of attention layers. Please select a specific layer first. "
+            "Example: attention = sample['attentions'][-1]"
+        )
+
     # Handle different tensor shapes
     if attention.dim() == 4:
         attention = attention[0]
@@ -440,6 +475,13 @@ def compute_positional_analysis(
     Returns:
         Dictionary mapping keyword to average image attention %
     """
+    # Handle tuple of layers
+    if isinstance(attention, tuple):
+        raise TypeError(
+            "Received tuple of attention layers. Please select a specific layer first. "
+            "Example: attention = sample['attentions'][-1]"
+        )
+
     # Handle different tensor shapes
     if attention.dim() == 4:
         attention = attention[0]
