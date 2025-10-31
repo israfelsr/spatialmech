@@ -1,3 +1,4 @@
+import argparse
 import torch
 import numpy as np
 import pandas as pd
@@ -177,7 +178,20 @@ def run_inference(
 
 
 def main():
-    """Run inference on all datasets."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--dataset",
+        default="controlled_a",
+        type=str,
+        choices=[
+            "controlled_a",
+            "controlled_b",
+            "coco_one",
+            "coco_two",
+        ],
+    )
+    args = parser.parse_args()
+
     # Configuration
     base_path = "/leonardo_work/EUHPC_D27_102/spatialmech/dataset"
     model_path = "/leonardo_work/EUHPC_D27_102/compmech/models/Qwen3-VL-4B-Instruct"
@@ -185,43 +199,35 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Dataset configurations
-    datasets = [
-        ("controlled_a.hf", "controlled_a"),
-        ("controlled_b.hf", "controlled_b"),
-        ("coco_one.hf", "coco_one"),
-        ("coco_two.hf", "coco_two"),
-    ]
-
+    datasets = {
+        "controlled_a": "controlled_a.hf",
+        "controlled_b": "controlled_b.hf",
+        "coco_one": "coco_one.hf",
+        "coco_two": "coco_two.hf",
+    }
+    dataset_name = datasets[args.dataset]
     # Run inference on each dataset
     all_results = {}
-    for dataset_file, dataset_name in datasets:
-        dataset_path = os.path.join(base_path, dataset_file)
-        print(f"\n{'='*80}")
-        print(f"Processing {dataset_name}")
-        print(f"{'='*80}")
+    dataset_path = os.path.join(base_path, dataset_name)
+    print(f"Processing {dataset_name}")
+    print(f"\n{'='*80}")
 
-        try:
-            df = run_inference(
-                dataset_path, dataset_name, model_path, device, output_dir
-            )
-            all_results[dataset_name] = df
-        except Exception as e:
-            print(f"Error processing {dataset_name}: {e}")
-            import traceback
+    try:
+        df = run_inference(dataset_path, dataset_name, model_path, device, output_dir)
+    except Exception as e:
+        print(f"Error processing {dataset_name}: {e}")
+        import traceback
 
-            traceback.print_exc()
-            continue
+        traceback.print_exc()
 
     # Print summary
-    print(f"\n{'='*80}")
     print("Summary")
     print(f"{'='*80}")
-    for dataset_name, df in all_results.items():
-        if "correct" in df.columns:
-            accuracy = df["correct"].mean()
-            print(f"{dataset_name}: {accuracy:.4f} ({df['correct'].sum()}/{len(df)})")
-        else:
-            print(f"{dataset_name}: {len(df)} samples processed")
+    if "correct" in df.columns:
+        accuracy = df["correct"].mean()
+        print(f"{dataset_name}: {accuracy:.4f} ({df['correct'].sum()}/{len(df)})")
+    else:
+        print(f"{dataset_name}: {len(df)} samples processed")
 
 
 if __name__ == "__main__":
