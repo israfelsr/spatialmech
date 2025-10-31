@@ -38,18 +38,18 @@ def plot_layer_wise_attention(
             raise ValueError("sample_idx is required when passing a DataFrame")
 
         # Filter for specific sample
-        sample_data = data[data['sample_idx'] == sample_idx].sort_values('layer_idx')
+        sample_data = data[data["sample_idx"] == sample_idx].sort_values("layer_idx")
 
         if len(sample_data) == 0:
             raise ValueError(f"No data found for sample_idx={sample_idx}")
 
-        layers = sample_data['layer_idx'].values
-        image_pcts = sample_data['image_pct'].values
-        text_pcts = sample_data['text_pct'].values
-        bos_pcts = sample_data['bos_pct'].values
+        layers = sample_data["layer_idx"].values
+        image_pcts = sample_data["image_pct"].values
+        text_pcts = sample_data["text_pct"].values
+        bos_pcts = sample_data["bos_pct"].values
 
         # Get GT label if available for title
-        gt_label = sample_data['GT'].iloc[0] if 'GT' in sample_data.columns else None
+        gt_label = sample_data["GT"].iloc[0] if "GT" in sample_data.columns else None
 
     # Handle list of dicts input
     else:
@@ -158,7 +158,7 @@ def plot_layer_wise_attention_with_ci(
     if gt_filter is not None:
         if isinstance(gt_filter, str):
             gt_filter = [gt_filter]
-        df_filtered = df[df['GT'].isin(gt_filter)].copy()
+        df_filtered = df[df["GT"].isin(gt_filter)].copy()
         gt_label = ", ".join(gt_filter)
     else:
         df_filtered = df.copy()
@@ -169,19 +169,15 @@ def plot_layer_wise_attention_with_ci(
 
     # Melt the dataframe for seaborn
     df_melted = df_filtered.melt(
-        id_vars=['sample_idx', 'layer_idx', 'GT'],
-        value_vars=['image_pct', 'text_pct', 'bos_pct'],
-        var_name='attention_type',
-        value_name='percentage'
+        id_vars=["sample_idx", "layer_idx", "GT"],
+        value_vars=["image_pct", "text_pct", "bos_pct"],
+        var_name="attention_type",
+        value_name="percentage",
     )
 
     # Create more readable labels
-    label_map = {
-        'image_pct': 'Image',
-        'text_pct': 'Text',
-        'bos_pct': 'BOS/Other'
-    }
-    df_melted['attention_type'] = df_melted['attention_type'].map(label_map)
+    label_map = {"image_pct": "Image", "text_pct": "Text", "bos_pct": "BOS/Other"}
+    df_melted["attention_type"] = df_melted["attention_type"].map(label_map)
 
     # Create figure
     fig, ax = plt.subplots(figsize=figsize)
@@ -189,16 +185,16 @@ def plot_layer_wise_attention_with_ci(
     # Create lineplot with confidence intervals
     sns.lineplot(
         data=df_melted,
-        x='layer_idx',
-        y='percentage',
-        hue='attention_type',
-        style='attention_type',
-        markers=['o', 's', '^'],
+        x="layer_idx",
+        y="percentage",
+        hue="attention_type",
+        style="attention_type",
+        markers=["o", "s", "^"],
         markersize=10,
         linewidth=3,
-        ci=ci,
+        errorbar=("ci", ci),
         ax=ax,
-        alpha=0.8
+        alpha=0.8,
     )
 
     # Customize plot
@@ -206,17 +202,17 @@ def plot_layer_wise_attention_with_ci(
     ax.set_ylabel("Attention Percentage (%)", fontsize=12, fontweight="bold")
 
     if title is None:
-        n_samples = df_filtered['sample_idx'].nunique()
+        n_samples = df_filtered["sample_idx"].nunique()
         title = f"Last Token Attention Distribution Across Layers\n"
         title += f"GT: {gt_label} | {n_samples} samples | "
-        if ci == 'sd':
+        if ci == "sd":
             title += "Mean ± SD"
         else:
             title += f"Mean ± {ci}% CI"
     ax.set_title(title, fontsize=14, fontweight="bold", pad=20)
 
     # Set x-axis ticks to show all layers
-    layers = sorted(df_filtered['layer_idx'].unique())
+    layers = sorted(df_filtered["layer_idx"].unique())
     ax.set_xticks(layers)
     ax.set_xticklabels([f"L{int(i)}" for i in layers])
 
@@ -265,53 +261,57 @@ def plot_layer_wise_attention_comparison(
         ax = axes[idx]
 
         # Filter data
-        df_filtered = df[df['GT'] == gt_val].copy()
+        df_filtered = df[df["GT"] == gt_val].copy()
 
         if len(df_filtered) == 0:
-            ax.text(0.5, 0.5, f"No data for GT={gt_val}",
-                   ha='center', va='center', fontsize=12)
+            ax.text(
+                0.5,
+                0.5,
+                f"No data for GT={gt_val}",
+                ha="center",
+                va="center",
+                fontsize=12,
+            )
             ax.set_title(f"GT: {gt_val}")
             continue
 
         # Melt the dataframe
         df_melted = df_filtered.melt(
-            id_vars=['sample_idx', 'layer_idx', 'GT'],
-            value_vars=['image_pct', 'text_pct', 'bos_pct'],
-            var_name='attention_type',
-            value_name='percentage'
+            id_vars=["sample_idx", "layer_idx", "GT"],
+            value_vars=["image_pct", "text_pct", "bos_pct"],
+            var_name="attention_type",
+            value_name="percentage",
         )
 
-        label_map = {
-            'image_pct': 'Image',
-            'text_pct': 'Text',
-            'bos_pct': 'BOS/Other'
-        }
-        df_melted['attention_type'] = df_melted['attention_type'].map(label_map)
+        label_map = {"image_pct": "Image", "text_pct": "Text", "bos_pct": "BOS/Other"}
+        df_melted["attention_type"] = df_melted["attention_type"].map(label_map)
 
         # Plot
         sns.lineplot(
             data=df_melted,
-            x='layer_idx',
-            y='percentage',
-            hue='attention_type',
-            style='attention_type',
-            markers=['o', 's', '^'],
+            x="layer_idx",
+            y="percentage",
+            hue="attention_type",
+            style="attention_type",
+            markers=["o", "s", "^"],
             markersize=8,
             linewidth=2.5,
-            ci=ci,
+            errorbar=("ci", ci),
             ax=ax,
-            alpha=0.8
+            alpha=0.8,
         )
 
         # Customize
-        n_samples = df_filtered['sample_idx'].nunique()
-        ax.set_title(f"GT: {gt_val} ({n_samples} samples)", fontsize=12, fontweight="bold")
+        n_samples = df_filtered["sample_idx"].nunique()
+        ax.set_title(
+            f"GT: {gt_val} ({n_samples} samples)", fontsize=12, fontweight="bold"
+        )
         ax.set_xlabel("Layer", fontsize=10)
         ax.set_ylabel("Attention %", fontsize=10)
         ax.grid(True, alpha=0.3)
         ax.set_ylim(0, 100)
 
-        layers = sorted(df_filtered['layer_idx'].unique())
+        layers = sorted(df_filtered["layer_idx"].unique())
         ax.set_xticks(layers)
         ax.set_xticklabels([f"L{int(i)}" for i in layers])
 
@@ -319,13 +319,13 @@ def plot_layer_wise_attention_comparison(
 
     # Hide unused subplots
     for idx in range(n_gts, len(axes)):
-        axes[idx].axis('off')
+        axes[idx].axis("off")
 
     plt.suptitle(
         "Layer-wise Attention Comparison by Ground Truth",
         fontsize=16,
         fontweight="bold",
-        y=0.995
+        y=0.995,
     )
     plt.tight_layout()
 

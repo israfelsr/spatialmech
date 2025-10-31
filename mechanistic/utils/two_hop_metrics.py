@@ -165,13 +165,6 @@ def text_tokens_attention_distribution(
             - per_token_image_pct: [num_text_tokens] array of image attention %
             - per_token_text_pct: [num_text_tokens] array of text attention %
     """
-    # Handle tuple of layers
-    if isinstance(attention, tuple):
-        raise TypeError(
-            "Received tuple of attention layers. Please select a specific layer first. "
-            "Example: attention = sample['attentions'][-1]"
-        )
-
     # Handle different tensor shapes
     if attention.dim() == 4:
         attention = attention[0]  # Remove batch dim
@@ -220,8 +213,6 @@ def text_tokens_attention_distribution(
         "image_pct_std": per_token_image_pct.std(),
         "text_pct_mean": per_token_text_pct.mean(),
         "text_pct_std": per_token_text_pct.std(),
-        "per_token_image_pct": per_token_image_pct,
-        "per_token_text_pct": per_token_text_pct,
     }
 
 
