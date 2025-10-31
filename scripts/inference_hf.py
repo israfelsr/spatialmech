@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 from datasets import load_from_disk
 from transformers import Qwen2VLForConditionalGeneration, AutoProcessor
-from qwen_vl_utils import process_vision_info
 from tqdm import tqdm
 import random
 import os
@@ -93,11 +92,9 @@ def run_inference(
         text = processor.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True
         )
-        image_inputs, video_inputs = process_vision_info(messages)
         inputs = processor(
             text=[text],
-            images=image_inputs,
-            videos=video_inputs,
+            images=[image],
             padding=True,
             return_tensors="pt",
         )
