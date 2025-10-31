@@ -17,7 +17,7 @@ class QwenVLLMWrapper:
         model_name="/leonardo_work/EUHPC_D27_102/compmech/models/Qwen3-VL-4B-Instruct",
     ):
         """
-        Initialize Qwen2-VL model wrapper with vLLM.
+        Initialize QwenX-VL model wrapper with vLLM.
 
         Args:
             root_dir: Directory for model cache
@@ -39,6 +39,7 @@ class QwenVLLMWrapper:
             temperature=0.0,  # Greedy decoding for consistent results
             max_tokens=100,
             stop_token_ids=None,
+            seed=42,
         )
 
         self.device = device
